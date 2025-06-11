@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client-js"
+  //output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model with role-based access
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  isTrustedOwner  Boolean  @default(false)
+  password      String?
+  image         String?
+  isBlocked Boolean @default(false)
+  phoneNumber     String?   @unique // Make it unique if you want to prevent multiple accounts with the same number
+  phoneVerified   Boolean   @default(false) // Optional: for phone number verification later
+  role          UserRole  @default(RENTER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // OAuth accounts
+  accounts      Account[]
+  sessions      Session[]
+  // User relationships
+  cars          Car[]           // Cars owned by the user (if role is OWNER)
+  bookings      Booking[]       // Bookings made by the user
+  reviews       Review[]        // Reviews written by the user
+  payments      Payment[]       // Payments made by the user
+  notifications Notification[]  // Notifications for the user
+}
+
+// OAuth account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Car model
+model Car {
+  id              String    @id @default(cuid())
+  title           String
+  description     String    @db.Text
+  make            String
+  model           String
+  year            Int
+  color           String
+  licensePlate    String?
+  transmission    TransmissionType
+  fuelType        FuelType
+  features        String[]
+  pricePerHour    Float?
+  pricePerDay     Float
+  location        String    // Location description
+  latitude        Float?    // For map integration
+  longitude       Float?    // For map integration
+  images          String[]  // URLs to images
+  availableFrom   DateTime?
+  availableTo     DateTime?
+  seats          Int
+  isVerified      Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  category      CarCategory // SUV, Sedan, Van, 4x4, Luxury
+  imageUrls     String[] // Array of URLs for car images
+  availability  Json?
+
+  // Car relationships
+  ownerId         String
+  owner           User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+  reviews         Review[]
+  isListed      Boolean  @default(true)  // Owner can delist temporarily
+  averageRating Float    @default(0)
+  totalRatings  Int      @default(0)
+
+  @@index([ownerId])
+  @@index([category])
+  @@index([location]) // For location-based searches
+  // Average rating calculation
+
+}
+
+// Booking model
+model Booking {
+  id              String        @id @default(cuid())
+  startDate       DateTime
+  endDate         DateTime
+  pickupLocation  String
+  returnLocation  String
+  totalPrice      Float
+  status          BookingStatus @default(PENDING)
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Booking relationships
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  carId           String
+  car             Car           @relation(fields: [carId], references: [id], onDelete: Cascade)
+  payment         Payment?
+  review          Review?
+
+  @@index([userId])
+  @@index([carId])
+  @@index([startDate, endDate]) // For availability checks
+  @@index([status])
+}
+
+// ... (User, Car, Role, Enums, Booking, Review models as before) ...
+
+model PlatformSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique // e.g., "DEFAULT_CURRENCY", "COMMISSION_RATE", "MAINTENANCE_MODE"
+  value     String   // Store value as string, parse as needed
+  label     String?  // User-friendly label for the setting
+  type      String   @default("string") // e.g., "string", "number", "boolean", "percentage" (for UI hints)
+  group     String?  // e.g., "General", "Payments", "Branding" (for UI organization)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+// Payment model
+model Payment {
+  id              String        @id @default(cuid())
+  amount          Float
+  currency        String        @default("USD")
+  paymentMethod   PaymentMethod
+  paymentType     PaymentType   @default(ONLINE)
+  status          PaymentStatus @default(PENDING)
+  transactionId   String?
+  receiptUrl      String?
+  invoiceUrl      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Payment relationships
+  bookingId       String        @unique
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Review model
+model Review {
+  id              String    @id @default(cuid())
+  rating          Int       // 1-5 stars
+  comment         String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Review relationships
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  carId           String
+  car             Car       @relation(fields: [carId], references: [id], onDelete: Cascade)
+  bookingId       String    @unique
+  booking         Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([carId])
+  @@index([userId])
+}
+
+// Notification model
+model Notification {
+  id              String            @id @default(cuid())
+  type            NotificationType
+  title           String
+  message         String            @db.Text
+  isRead          Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+
+  // Notification relationships
+  userId          String
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model FAQ {
+  id          String    @id @default(cuid())
+  question    String    @db.Text
+  answer      String    @db.Text
+  category    String?   // Optional: e.g., "General", "Payments", "For Owners", "For Renters"
+  isActive    Boolean   @default(true) // So admins can hide FAQs without deleting
+  sortOrder   Int?      // Optional: for manual ordering of FAQs within a category or globally
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  OWNER
+  RENTER
+}
+
+enum TransmissionType {
+  AUTOMATIC
+  MANUAL
+  SEMI_AUTOMATIC
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  ELECTRIC
+  HYBRID
+  PLUGIN_HYBRID
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  CANCELLED_BY_USER
+  CANCELLED_BY_OWNER
+  COMPLETED
+  NO_SHOW 
+  PAYMENT_FAILED // If online payment fails
+  AWAITING_PAYMENT // If Pay Online chosen but not yet paid
+  ON_DELIVERY_PENDING
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  PAYPAL
+  MPESA
+  CASH
+}
+
+enum PaymentType {
+  ONLINE
+  ON_DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum NotificationType {
+  BOOKING_REQUEST
+  BOOKING_CONFIRMED
+  BOOKING_CANCELLED
+  PAYMENT_RECEIVED
+  REVIEW_RECEIVED
+  SYSTEM
+  BOOKING_COMPLETED    // Booking marked as completed
+  BOOKING_REMINDER     // Reminder for upcoming booking
+  PAYMENT_SUCCESSFUL   // Payment processed successfully
+  PAYMENT_FAILED       // Payment attempt failed
+  REFUND_PROCESSED     // Refund issued
+  NEW_REVIEW           // New review received (for car owner)
+  REVIEW_REMINDER      // Reminder to leave a review (for renter)
+  ACCOUNT_VERIFIED     // User account verified
+  CAR_LISTING_APPROVED // Car listing approved by admin
+  CAR_LISTING_REJECTED // Car listing rejected by admin
+  MESSAGE_RECEIVED     // New message in chat (if chat feature added)
+  PROMOTION            // Platform promotions or news
+  SYSTEM_ALERT         // Important system-wide alerts
+}
+
+enum CarCategory {
+  SUV
+  SEDAN
+  VAN
+  FOUR_BY_FOUR // Prisma convention for multi-word is CamelCase, which translates to FOUR_BY_FOUR in DB
+  LUXURY
+  HATCHBACK
+  TRUCK
+  CONVERTIBLE
+  COUPE
+  MINIVAN
+}
