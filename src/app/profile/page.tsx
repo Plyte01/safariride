@@ -9,12 +9,14 @@ import { User as PrismaUser, UserRole } from '@prisma/client';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react'; // Assuming you're using lucide-react for icons
-import { FiUser, FiMail, FiEdit3, FiSave, FiCamera, FiX, FiShield, FiKey, FiBriefcase, FiCheckCircle, FiAlertTriangle, FiCalendar, FiTrash2 } from 'react-icons/fi'; // Example icons
+import { FiUser, FiMail, FiEdit3, FiSave, FiCamera, FiX, FiShield, FiKey, FiBriefcase, FiCheckCircle, FiAlertTriangle, FiCalendar, FiTrash2, FiPhone } from 'react-icons/fi'; // Example icons
+import { PhoneInput } from "@/components/ui/phone-input";
+import { PhoneVerificationModal } from '@/components/phone-verification-modal';
 
 // Subset of user data for display and editing
 type UserProfileData = Pick<
     PrismaUser, 
-    'id' | 'name' | 'email' | 'image' | 'role' | 'createdAt' | 'emailVerified' | 'isTrustedOwner'
+    'id' | 'name' | 'email' | 'image' | 'role' | 'createdAt' | 'emailVerified' | 'isTrustedOwner' | 'phoneNumber' | 'phoneVerified'
 >;
 // _count?: { bookings?: number; cars?: number }; // If API sends counts
 
@@ -61,6 +63,11 @@ export default function UserProfilePage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [newPhone, setNewPhone] = useState('');
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
 
   useEffect(() => {
@@ -239,6 +246,63 @@ export default function UserProfilePage() {
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
+  const handlePhoneSave = async () => {
+    if (!newPhone) {
+      setPhoneError('Phone number is required');
+      return;
+    }
+
+    setIsSavingPhone(true);
+    setPhoneError(null);
+
+    try {
+      // Update the phone number using the profile API
+      const response = await fetch('/api/profile/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: newPhone }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to update phone number');
+      }
+
+      const data = await response.json();
+      setUserProfile(prev => prev ? {
+        ...prev,
+        phoneNumber: data.phoneNumber,
+        phoneVerified: data.phoneVerified
+      } : null);
+      setIsEditingPhone(false);
+      
+      // Show verification modal if phone is not verified
+      if (!data.phoneVerified) {
+        setShowVerificationModal(true);
+      } else {
+        toast.success('Phone number updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating phone:', error);
+      if (error instanceof Error) {
+        setPhoneError(error.message);
+        toast.error(error.message);
+      } else {
+        toast.error('Failed to update phone number');
+      }
+    } finally {
+      setIsSavingPhone(false);
+    }
+  };
+
+  const handlePhoneVerified = () => {
+    setUserProfile(prev => prev ? {
+      ...prev,
+      phoneVerified: true
+    } : null);
+    toast.success('Phone number verified successfully');
+  };
+
   if (isLoading || sessionStatus === 'loading') return <div className="text-center py-20"><Loader2 className="h-12 w-12 mx-auto animate-spin text-blue-600"/> <p className="mt-3">Loading profile...</p></div>;
   if (error) return <div className="text-center py-20 text-red-500">Error: {error}</div>;
   if (!userProfile) return <div className="text-center py-20">Could not load user profile.</div>;
@@ -326,6 +390,72 @@ export default function UserProfilePage() {
              <InfoRow label="Trusted Owner" value={userProfile.isTrustedOwner ? <span className="text-green-600 flex items-center"><FiCheckCircle className="mr-1.5"/> Yes</span> : <span className="text-orange-500 flex items-center"><FiAlertTriangle className="mr-1.5"/> No (Verification may take longer)</span>} />
         )}
         <InfoRow label="Joined SafariRide" value={formatTimestamp(userProfile.createdAt)} />
+        {isEditingPhone ? (
+          <div className="py-2 sm:grid sm:grid-cols-3 sm:gap-4 items-center">
+            <label htmlFor="newPhone" className="text-sm font-medium text-gray-500 flex items-center">
+              <FiPhone className="mr-2 text-gray-400 w-5 h-5"/>Phone Number
+            </label>
+            <div className="mt-1 sm:mt-0 sm:col-span-2 flex items-center space-x-2">
+              <PhoneInput
+                id="newPhone"
+                value={newPhone}
+                onChange={setNewPhone}
+                error={phoneError || undefined}
+                className="flex-grow"
+              />
+              <Button size="sm" onClick={handlePhoneSave} disabled={isSavingPhone} className="btn-primary">
+                {isSavingPhone ? <Loader2 className="h-4 w-4 animate-spin"/> : <FiSave className="h-4 w-4"/>}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => {
+                setIsEditingPhone(false);
+                setNewPhone(userProfile.phoneNumber || '');
+                setPhoneError(null);
+              }}>
+                <FiX className="h-4 w-4"/>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <InfoRow 
+            label="Phone Number" 
+            value={
+              userProfile.phoneNumber ? (
+                <div className="flex items-center">
+                  <span>{userProfile.phoneNumber}</span>
+                  {userProfile.phoneVerified ? (
+                    <span className="ml-2 text-green-600 flex items-center">
+                      <FiCheckCircle className="mr-1.5"/> Verified
+                    </span>
+                  ) : (
+                    <span className="ml-2 text-orange-500 flex items-center">
+                      <FiAlertTriangle className="mr-1.5"/> Not Verified
+                    </span>
+                  )}
+                  <button 
+                    onClick={() => {
+                      setIsEditingPhone(true);
+                      setNewPhone(userProfile.phoneNumber || '');
+                    }}
+                    className="ml-2 text-xs text-blue-500 hover:underline"
+                  >
+                    (Edit)
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => {
+                    setIsEditingPhone(true);
+                    setNewPhone('');
+                  }}
+                  className="text-blue-500 hover:underline"
+                >
+                  Add Phone Number
+                </button>
+              )
+            } 
+            icon={<FiPhone />} 
+          />
+        )}
       </ProfileSection>
 
       {/* Account Activity Summary Sections (Links to other pages) */}
@@ -402,13 +532,14 @@ export default function UserProfilePage() {
         </div>
       )}
 
+      <PhoneVerificationModal
+        isOpen={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        phoneNumber={newPhone}
+        onVerified={handlePhoneVerified}
+      />
+
     </div>
   );
 }
 
-// Add to globals.css:
-/*
-.input-file { @apply block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100; }
-.profile-activity-link { @apply flex items-center p-4 rounded-lg font-medium transition-colors; }
-.profile-settings-link { @apply flex items-center p-3 rounded-md text-sm text-gray-700 hover:bg-gray-100 transition-colors; }
-*/

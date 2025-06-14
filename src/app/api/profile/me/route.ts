@@ -21,14 +21,13 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { name, image } = body; // Expecting 'name' and 'image' (Cloudinary URL)
+    const { name, image, phoneNumber } = body; // Added phoneNumber
     const currentUser = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!currentUser) {
         return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
     const dataToUpdate: Prisma.UserUpdateInput = {};
-
 
     if (name !== undefined) {
       if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50) {
@@ -44,6 +43,22 @@ export async function PATCH(req: NextRequest) {
         dataToUpdate.image = image;
       } else if (image !== null) { // If image is provided but not a valid URL or null to clear
           return NextResponse.json({ message: 'Invalid image URL provided.' }, { status: 400 });
+      }
+    }
+
+    if (phoneNumber !== undefined) {
+      if (phoneNumber === null || (typeof phoneNumber === 'string' && phoneNumber.trim() === '')) {
+        dataToUpdate.phoneNumber = null;
+        dataToUpdate.phoneVerified = false;
+      } else if (typeof phoneNumber === 'string') {
+        // Basic phone number validation (you might want to use a more robust validation)
+        const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 format
+        if (!phoneRegex.test(phoneNumber.trim())) {
+          return NextResponse.json({ message: 'Invalid phone number format. Please use E.164 format (e.g., +254712345678).' }, { status: 400 });
+        }
+        dataToUpdate.phoneNumber = phoneNumber.trim();
+        // When phone number is updated, verification status is reset
+        dataToUpdate.phoneVerified = false;
       }
     }
     
@@ -62,9 +77,8 @@ export async function PATCH(req: NextRequest) {
         email: true,
         image: true,
         role: true,
-        // emailVerified: true,
-        // createdAt: true,
-        // isTrustedOwner: true,
+        phoneNumber: true,
+        phoneVerified: true,
       }
     });
 
@@ -103,6 +117,8 @@ export async function GET() {
         role: true,
         isTrustedOwner: true,
         createdAt: true,
+        phoneNumber: true,
+        phoneVerified: true,
         // You can include counts or recent items if needed for a profile summary
         // _count: {
         //   select: {

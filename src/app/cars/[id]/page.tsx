@@ -13,7 +13,9 @@ import "react-datepicker/dist/react-datepicker.css";
 interface CarDetails extends Car { // 'Car' is directly from Prisma
   owner: {
     name: string | null;
-    email: string | null; // Or other owner details if fetched
+    email: string | null;
+    phoneNumber: string | null;
+    phoneVerified: boolean;
   } | null;
 }
 
@@ -328,8 +330,16 @@ export default function CarDetailPage() {
                 <div className="mt-6 border-t pt-6">
                   <h2 className="text-xl font-semibold text-gray-700 mb-3">Owner Information</h2>
                   <p className="text-gray-600"><strong>Listed by:</strong> {car.owner.name || 'N/A'}</p>
-                  {/* You might want a "Contact Owner" button instead of direct email for privacy */}
-                  {/* <p className="text-gray-600">Contact: {car.owner.email}</p> */}
+                  {car.owner.phoneNumber && (
+                    <p className="text-gray-600 mt-1">
+                      <strong>Phone:</strong> {car.owner.phoneNumber}
+                      {car.owner.phoneVerified ? (
+                        <span className="ml-1 text-green-600">✓ Verified</span>
+                      ) : (
+                        <span className="ml-1 text-orange-600">⚠ Not Verified</span>
+                      )}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -396,13 +406,15 @@ export default function CarDetailPage() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={isBooking || sessionStatus === 'loading' || !session || !calculatedPrice || calculatedPrice <= 0}
-                className="w-full btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isBooking ? 'Submitting Request...' : 'Request to Book'}
-              </button>
+              <div className="flex space-x-4">
+                <button
+                  type="submit"
+                  disabled={isBooking || sessionStatus === 'loading' || !session || !calculatedPrice || calculatedPrice <= 0}
+                  className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isBooking ? 'Submitting Request...' : 'Request to Book'}
+                </button>
+              </div>
               {!car.isActive && <p className="text-sm text-center text-red-500 mt-2">This car is currently not active for bookings.</p>}
               {!car.isVerified && <p className="text-sm text-center text-yellow-600 mt-2">This car is pending verification.</p>}
             </form>
@@ -421,14 +433,3 @@ export default function CarDetailPage() {
 }
 
 // Add to your src/app/globals.css or a dedicated CSS module:
-/*
-.input-field {
-  @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
-}
-.select-field {
-  @apply mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md;
-}
-.btn-primary {
-  @apply w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500;
-}
-*/

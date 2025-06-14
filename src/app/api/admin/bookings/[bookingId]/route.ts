@@ -37,7 +37,17 @@ export async function GET(
             owner: { select: { id: true, name: true, email: true } },
           },
         },
-        user: { select: { id: true, name: true, email: true, image: true } },
+        user: { 
+          select: { 
+            id: true, 
+            name: true, 
+            email: true, 
+            image: true,
+            role: true,
+            phoneNumber: true,
+            phoneVerified: true
+          } 
+        },
         payment: true,
         review: {
           include: {

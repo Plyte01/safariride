@@ -6,34 +6,45 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiFileText } from 'react-icons/fi';
+import { FiFileText, FiCalendar, FiDollarSign, FiStar } from 'react-icons/fi';//, FiMessageSquare, FiAlertCircle
 import { 
     Car, 
     UserRole, 
-    Booking, 
     BookingStatus, 
-    PaymentStatus as PrismaPaymentStatus, // Aliased to avoid conflict
-    PaymentMethod as PrismaPaymentMethod // Aliased
+    PaymentStatus as PrismaPaymentStatus,
+    PaymentMethod as PrismaPaymentMethod
 } from '@prisma/client';
+import CarAvailabilityCalendar from '@/components/calendar/CarAvailabilityCalendar';
 
 // Type for Car listings displayed on the dashboard
 // Use Car from Prisma directly, as no extra fields are needed
 
 // Type for Bookings on Owner's cars, including related data
-interface OwnerManagedBooking extends Omit<Booking, 'car' | 'payment' | 'user' | 'review'> {
+interface OwnerManagedBooking {
+  id: string;
+  status: BookingStatus;
+  startDate: Date;
+  endDate: Date;
+  pickupLocation: string;
+  returnLocation: string;
+  totalPrice: number;
+  notes: string | null;
   car: { 
     id: string; 
-    title: string | null; // title is now optional in Car model from your schema
+    title: string | null;
     make: string; 
     model: string; 
     images: string[]; 
   };
-  user: { // This is the Renter
+  user: {
     id: string; 
     name: string | null; 
     email: string; 
+    phoneNumber: string | null;
+    phoneVerified: boolean;
   }; 
   payment: { 
+    id: string;
     status: PrismaPaymentStatus; 
     paymentMethod: PrismaPaymentMethod; 
     amount: number; 
@@ -78,6 +89,14 @@ const getBookingStatusColor = (status: BookingStatus): string => {
     }
 };
 
+interface DashboardStats {
+  totalEarnings: number;
+  activeBookings: number;
+  averageRating: number;
+  totalReviews: number;
+  //pendingMessages: number;
+  //maintenanceAlerts: number;
+}
 
 export default function OwnerDashboardPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -87,11 +106,23 @@ export default function OwnerDashboardPage() {
   const [managedBookings, setManagedBookings] = useState<OwnerManagedBooking[]>([]);
   const [isLoadingCars, setIsLoadingCars] = useState(true);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
-  const [pageError, setPageError] = useState<string | null>(null); // General error for the page
-
+  const [pageError, setPageError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'myCars' | 'manageBookings'>('myCars');
-  const [bookingActionLoading, setBookingActionLoading] = useState<Record<string, boolean>>({}); // For per-booking loading state
+  const [bookingActionLoading, setBookingActionLoading] = useState<Record<string, boolean>>({});
 
+  const [stats, setStats] = useState<DashboardStats>({
+    totalEarnings: 0,
+    activeBookings: 0,
+    averageRating: 0,
+    totalReviews: 0,
+    //pendingMessages: 0,
+    //maintenanceAlerts: 0,
+  });
+
+  const [, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
@@ -151,6 +182,33 @@ export default function OwnerDashboardPage() {
 
   }, [session, sessionStatus, router]);
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+      return;
+    }
+
+    const fetchDashboardData = async () => {
+      try {
+        const statsRes = await fetch('/api/owner/dashboard/stats');
+        const statsData = await statsRes.json();
+        
+        if (!statsRes.ok) {
+          throw new Error(statsData.details || statsData.error || 'Failed to fetch dashboard stats');
+        }
+        
+        setStats(statsData);
+      } catch (err) {
+        console.error('Dashboard data fetch error:', err);
+        setPageError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [router]);
+
   const handleDeleteCar = async (carId: string) => {
     if (!confirm('Are you sure you want to permanently delete this car listing and all its associated data (bookings, reviews)? This action cannot be undone.')) {
         return;
@@ -163,7 +221,7 @@ export default function OwnerDashboardPage() {
         }
         setCars(prevCars => prevCars.filter(car => car.id !== carId));
         // Also, might need to remove bookings associated with this car from managedBookings if displayed
-        setManagedBookings(prev => prev.filter(b => b.carId !== carId));
+        setManagedBookings(prev => prev.filter(b => b.car.id !== carId));
         alert('Car deleted successfully!');
     } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : String(err);
@@ -202,6 +260,37 @@ export default function OwnerDashboardPage() {
     }
   };
 
+  const handleMarkAsPaid = async (bookingId: string) => {
+    setIsUpdating(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/payment`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to update payment status');
+      }
+
+      const updatedBooking = await response.json();
+      setManagedBookings(prev => 
+        prev.map(booking => 
+          booking.id === bookingId ? { ...booking, payment: updatedBooking.payment } : booking
+        )
+      );
+      setSuccess('Payment status updated successfully');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update payment status');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   if (sessionStatus === 'loading' || (isLoadingCars && activeTab === 'myCars') || (isLoadingBookings && activeTab === 'manageBookings')) {
     return <div className="flex justify-center items-center min-h-screen"><p className="text-xl">Loading Owner Dashboard...</p></div>;
@@ -246,6 +335,18 @@ export default function OwnerDashboardPage() {
       </div>
 
       {pageError && <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md text-sm">{pageError}</div>}
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+      
+      {success && (
+        <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
+          {success}
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <div className="mb-6 border-b border-gray-200">
@@ -338,9 +439,19 @@ export default function OwnerDashboardPage() {
                       <div>
                         <p className="text-sm font-semibold text-gray-800">Renter: {booking.user.name || 'N/A'} <span className="text-gray-500 font-normal">({booking.user.email})</span></p>
                         <p className="text-xs text-gray-500">Booking ID: {booking.id.substring(0,8)}...</p>
+                        {booking.user.phoneNumber && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Phone: {booking.user.phoneNumber}
+                            {booking.user.phoneVerified ? (
+                              <span className="ml-1 text-green-600">✓ Verified</span>
+                            ) : (
+                              <span className="ml-1 text-orange-600">⚠ Not Verified</span>
+                            )}
+                          </p>
+                        )}
                       </div>
-                      <span className={`status-badge text-xs mt-2 sm:mt-0 ${getBookingStatusColor(booking.status)}`}>
-                        {formatEnumValue(booking.status)}
+                      <span className={`status-badge text-xs mt-2 sm:mt-0 ${getBookingStatusColor(booking.status as BookingStatus)}`}>
+                        {formatEnumValue(booking.status as BookingStatus)}
                       </span>
                     </div>
                     <div className="mt-2 text-xs text-gray-600 space-y-0.5 border-t pt-2">
@@ -348,7 +459,18 @@ export default function OwnerDashboardPage() {
                       <p><strong>Pickup:</strong> {booking.pickupLocation}</p>
                       <p><strong>Return:</strong> {booking.returnLocation}</p>
                       <p><strong>Price:</strong> {booking.payment?.currency || 'KES'} {booking.totalPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-                      {booking.payment && <p><strong>Payment:</strong> {formatEnumValue(booking.payment.paymentMethod)} - {formatEnumValue(booking.payment.status)}</p>}
+                      <div className="flex items-center gap-2">
+                        <p><strong>Payment:</strong> {formatEnumValue(booking.payment?.paymentMethod)} - {formatEnumValue(booking.payment?.status)}</p>
+                        {booking.payment?.status === PrismaPaymentStatus.PENDING && (
+                          <button
+                            onClick={() => handleMarkAsPaid(booking.id)}
+                            disabled={isUpdating}
+                            className="ml-2 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isUpdating ? 'Updating...' : 'Mark as Paid'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                     {booking.notes && <p className="mt-1 text-xs text-gray-500 italic"><strong>Renter Notes:</strong> {booking.notes}</p>}
 
@@ -374,7 +496,7 @@ export default function OwnerDashboardPage() {
                                       <button onClick={() => handleBookingStatusUpdate(booking.id, BookingStatus.NO_SHOW)} className="btn-xs btn-warning-outline">Mark as No-Show</button>
                                   </>
                               )}
-                              {([BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT, BookingStatus.ON_DELIVERY_PENDING, BookingStatus.CONFIRMED] as BookingStatus[]).includes(booking.status) && (
+                              {([BookingStatus.PENDING, BookingStatus.AWAITING_PAYMENT, BookingStatus.ON_DELIVERY_PENDING, BookingStatus.CONFIRMED] as BookingStatus[]).includes(booking.status as BookingStatus) && (
                                 <button 
                                   onClick={() => {
                                       const reason = prompt("Reason for cancellation (optional):");
@@ -396,28 +518,93 @@ export default function OwnerDashboardPage() {
           )}
         </div>
       )}
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Total Earnings</h3>
+            <FiDollarSign className="text-green-500 text-xl" />
+          </div>
+          <p className="text-2xl font-bold">KES {stats.totalEarnings.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Active Bookings</h3>
+            <FiCalendar className="text-blue-500 text-xl" />
+          </div>
+          <p className="text-2xl font-bold">{stats.activeBookings}</p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Average Rating</h3>
+            <FiStar className="text-yellow-500 text-xl" />
+          </div>
+          <p className="text-2xl font-bold">{stats.averageRating.toFixed(1)}</p>
+          <p className="text-sm text-gray-500">from {stats.totalReviews} reviews</p>
+        </div>
+
+        {/* <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Pending Messages</h3>
+            <Link href="/owner/messages" className="text-blue-500 hover:text-blue-600">
+              <FiMessageSquare className="text-blue-500 text-xl" />
+            </Link>
+          </div>
+          <p className="text-2xl font-bold">{stats.pendingMessages}</p>
+          <Link href="/owner/messages" className="text-sm text-blue-500 hover:text-blue-600">
+            View Messages →
+          </Link>
+        </div> */}
+
+        {/* <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Maintenance Alerts</h3>
+            <FiAlertCircle className="text-red-500 text-xl" />
+          </div>
+          <p className="text-2xl font-bold">{stats.maintenanceAlerts}</p>
+        </div> */}
+      </div>
+
+      {/* Calendar Section */}
+      <div className="bg-white rounded-lg shadow mb-8">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold mb-4">Booking Calendar</h2>
+          <CarAvailabilityCalendar
+            carId="all"
+            bookings={managedBookings}
+            readOnly={true}
+          />
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
+        <div className="space-y-4">
+          {managedBookings.slice(0, 5).map((booking) => (
+            <div key={booking.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="font-medium">{booking.user.name}</p>
+                <p className="text-sm text-gray-500">
+                  {new Date(booking.startDate).toLocaleDateString()} - {new Date(booking.endDate).toLocaleDateString()}
+                </p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-sm ${
+                booking.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
+                booking.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {booking.status}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
 // Add to globals.css or a relevant CSS module
-/*
-.tab-button { @apply whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm outline-none; }
-.tab-active { @apply border-blue-500 text-blue-600; }
-.tab-inactive { @apply border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300; }
-
-.status-badge { @apply px-2 inline-flex text-xs leading-5 font-semibold rounded-full; }
-
-.btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 py-2 px-4 rounded shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2; }
-
-.btn-sm { @apply py-1.5 px-3 rounded text-xs font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1; }
-.btn-xs { @apply py-1 px-2.5 rounded text-xs font-medium shadow-sm focus:outline-none focus:ring-1 focus:ring-offset-1; }
-
-.btn-warning { @apply bg-yellow-500 text-black hover:bg-yellow-600 focus:ring-yellow-500; }
-.btn-danger { @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500; }
-.btn-info { @apply bg-sky-500 text-white hover:bg-sky-600 focus:ring-sky-500; }
-.btn-success { @apply bg-green-500 text-white hover:bg-green-600 focus:ring-green-500; }
-
-.btn-danger-outline { @apply border border-red-500 text-red-600 hover:bg-red-50 focus:ring-red-500; }
-.btn-warning-outline { @apply border border-yellow-500 text-yellow-700 hover:bg-yellow-50 focus:ring-yellow-500; }
-*/

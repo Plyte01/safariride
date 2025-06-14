@@ -79,7 +79,7 @@ function LoginForm() {
 
       if (result?.error) {
         console.log("SignIn Error from Credentials:", result.error);
-        if (result.error === "EMAIL_NOT_VERIFIED") { // Exact error string from authorize callback
+        if (result.error === "VERIFY_EMAIL") { // Updated error code to match authOptions.ts
             setErrorMessage("Your email address is not verified.");
             setShowResendVerification(true);
         } else if (result.error === "CredentialsSignin") {

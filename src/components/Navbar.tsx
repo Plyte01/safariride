@@ -17,23 +17,17 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"; // For mobile menu
 import {
-  Menu, CarFront, PlusCircle, UserCircle, LayoutDashboard, ListOrdered, LogOut, Shield, Sun, Moon, User // Added User icon for profile
+  Menu, CarFront, PlusCircle, UserCircle, LayoutDashboard, ListOrdered, LogOut, Shield, User // Added User icon for profile
 } from 'lucide-react';
-import { useTheme } from "next-themes";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const themeContext = useTheme();
-  const theme = themeContext?.theme ?? 'light';
-  const setTheme = themeContext?.setTheme ?? (() => {});
-
   const navLinks = [
     { href: "/browse-cars", label: "Browse Cars", icon: <CarFront className="mr-2 h-4 w-4" /> },
-    // Add more common links here like About, How it Works, FAQ if not in footer only
-    { href: "/how-it-works", label: "How It Works", icon: <CarFront className="mr-2 h-4 w-4" /> }, // Example
-    { href: "/faq", label: "FAQ", icon: <CarFront className="mr-2 h-4 w-4" /> }, // Example
+    { href: "/how-it-works", label: "How It Works", icon: <CarFront className="mr-2 h-4 w-4" /> },
+    { href: "/faq", label: "FAQ", icon: <CarFront className="mr-2 h-4 w-4" /> },
   ];
 
   // Links specific to authenticated users (can be further refined by role)
@@ -45,13 +39,10 @@ export default function Navbar() {
   const ownerLinks = [
     { href: "/owner/dashboard", label: "Owner Dashboard", icon: <LayoutDashboard className="mr-2 h-4 w-4" /> },
     { href: "/list-your-car", label: "List New Car", icon: <PlusCircle className="mr-2 h-4 w-4" /> },
-    // Consider if "/dashboard/my-cars" is distinct from "/owner/dashboard" or part of it.
-    // For simplicity, often Owner Dashboard is the main entry for their cars.
   ];
 
   const adminLinks = [
-    { href: "/admin/dashboard", label: "Admin Dashboard", icon: <Shield className="mr-2 h-4 w-4" /> }, // Changed icon
-    // Other admin links can be in admin layout's sidebar rather than here to keep user dropdown cleaner
+    { href: "/admin/dashboard", label: "Admin Dashboard", icon: <Shield className="mr-2 h-4 w-4" /> },
   ];
 
   const userRole = session?.user?.role as UserRole | undefined;
@@ -141,18 +132,6 @@ export default function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {typeof setTheme === "function" && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              aria-label="Toggle theme"
-            >
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            </Button>
-          )}
-
           {status === 'loading' ? (
             <div className="h-8 w-20 animate-pulse rounded-md bg-muted"></div>
           ) : session ? (

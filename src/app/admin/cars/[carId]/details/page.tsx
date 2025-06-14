@@ -17,7 +17,7 @@ interface BookingWithUser extends PrismaBooking {
   user: Pick<User, 'id' | 'name' | 'email'>; // Renter
 }
 interface AdminCarDetailsView extends Car {
-  owner: Pick<User, 'id' | 'name' | 'email' | 'image'> | null;
+  owner: Pick<User, 'id' | 'name' | 'email' | 'image' | 'phoneNumber' | 'phoneVerified'> | null;
   reviews: ReviewWithUser[];
   bookings: BookingWithUser[];
 }
@@ -191,6 +191,16 @@ export default function AdminCarDetailPage() {
                         <div>
                             <p className="text-sm font-medium text-gray-900">{car.owner.name}</p>
                             <p className="text-xs text-gray-500">{car.owner.email}</p>
+                            {car.owner.phoneNumber && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {car.owner.phoneNumber}
+                                    {car.owner.phoneVerified ? (
+                                        <span className="ml-1 text-green-600">✓ Verified</span>
+                                    ) : (
+                                        <span className="ml-1 text-orange-600">⚠ Not Verified</span>
+                                    )}
+                                </p>
+                            )}
                         </div>
                         <Link href={`/admin/users/${car.owner.id}/details`} className="text-xs text-blue-500 hover:underline ml-auto">View Owner Profile</Link>
                     </div>

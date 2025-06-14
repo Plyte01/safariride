@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react'; // To ensure admin access
 import { User, UserRole } from '@prisma/client'; // Import necessary types
-import { FiArrowLeft, FiShield, FiShieldOff, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiArrowLeft, FiShield, FiShieldOff, FiCheckCircle, FiXCircle, FiPhone, FiAlertTriangle } from 'react-icons/fi';
 
 // Extended type for user details, including counts and potentially recent items
 interface UserDetailsView extends Omit<User, 'password' | 'accounts' | 'sessions'> {
@@ -135,6 +135,28 @@ export default function AdminUserDetailPage() {
                 <DetailItem label="Email Verified" value={user.emailVerified ? 
                     <span className="flex items-center text-green-600"><FiCheckCircle className="mr-1.5"/> Verified on {formatTimestamp(user.emailVerified)}</span> : 
                     <span className="flex items-center text-red-600"><FiXCircle className="mr-1.5"/> Not Verified</span>} 
+                />
+                <DetailItem 
+                    label="Phone Number" 
+                    value={
+                        user.phoneNumber ? (
+                            <div className="flex items-center">
+                                <span>{user.phoneNumber}</span>
+                                {user.phoneVerified ? (
+                                    <span className="ml-2 text-green-600 flex items-center">
+                                        <FiCheckCircle className="mr-1.5"/> Verified
+                                    </span>
+                                ) : (
+                                    <span className="ml-2 text-orange-500 flex items-center">
+                                        <FiAlertTriangle className="mr-1.5"/> Not Verified
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <span className="text-gray-500">Not provided</span>
+                        )
+                    }
+                    icon={<FiPhone />}
                 />
                 <DetailItem 
                     label="Trusted Owner Status" 

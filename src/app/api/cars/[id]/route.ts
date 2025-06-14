@@ -18,7 +18,14 @@ export async function GET(
       where: { id: carId },
       include: {
         owner: {
-          select: { id: true, name: true, email: true, image: true },
+          select: { 
+            id: true, 
+            name: true, 
+            email: true, 
+            image: true,
+            phoneNumber: true,
+            phoneVerified: true 
+          },
         },
       },
     });

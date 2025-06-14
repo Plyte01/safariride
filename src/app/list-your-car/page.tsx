@@ -616,11 +616,3 @@ export default function ListYourCarPage() {
 }
 
 // Add/update these styles in your globals.css (ensure they are there):
-/*
-.label-form { @apply block text-sm font-medium text-gray-700 mb-1; }
-.input-form { @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm placeholder-gray-400; }
-.select-form { @apply block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md; }
-.form-section-title { @apply text-lg font-semibold text-gray-800 border-b border-gray-300 pb-3 mb-5; }
-.btn-primary-lg { @apply w-full flex justify-center items-center py-3 px-6 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors; }
-.btn-icon-danger { @apply text-red-500 hover:text-red-700 p-1.5 rounded-md hover:bg-red-100 transition-colors; }
-*/

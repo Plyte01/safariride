@@ -33,6 +33,8 @@ model User {
   reviews       Review[]        // Reviews written by the user
   payments      Payment[]       // Payments made by the user
   notifications Notification[]  // Notifications for the user
+  sentMessages  Message[]       @relation("SentMessages")
+  messageThreads MessageParticipant[]
 }
 
 // OAuth account model
@@ -109,12 +111,12 @@ model Car {
   isListed      Boolean  @default(true)  // Owner can delist temporarily
   averageRating Float    @default(0)
   totalRatings  Int      @default(0)
+  messageThreads  MessageThread[]
 
   @@index([ownerId])
   @@index([category])
   @@index([location]) // For location-based searches
   // Average rating calculation
-
 }
 
 // Booking model
@@ -178,25 +180,6 @@ model Payment {
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Review model
-model Review {
-  id              String    @id @default(cuid())
-  rating          Int       // 1-5 stars
-  comment         String?   @db.Text
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  // Review relationships
-  userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  carId           String
-  car             Car       @relation(fields: [carId], references: [id], onDelete: Cascade)
-  bookingId       String    @unique
-  booking         Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
-  @@index([carId])
-  @@index([userId])
-}
 
 // Notification model
 model Notification {
@@ -314,4 +297,85 @@ enum CarCategory {
   CONVERTIBLE
   COUPE
   MINIVAN
+}
+
+// Message Thread model
+model MessageThread {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  carId     String
+  car       Car       @relation(fields: [carId], references: [id])
+  messages  Message[]
+  participants MessageParticipant[]
+}
+
+// Message model
+model Message {
+  id        String    @id @default(cuid())
+  content   String
+  createdAt DateTime  @default(now())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id])
+  senderId  String
+  sender    User      @relation("SentMessages", fields: [senderId], references: [id])
+  attachments MessageAttachment[]
+}
+
+// Message Participant model
+model MessageParticipant {
+  id        String    @id @default(cuid())
+  threadId  String
+  thread    MessageThread @relation(fields: [threadId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  lastReadAt DateTime @default(now())
+
+  @@unique([threadId, userId])
+}
+
+// Message Attachment model
+model MessageAttachment {
+  id        String    @id @default(cuid())
+  url       String
+  type      String    // image, document, etc.
+  messageId String
+  message   Message   @relation(fields: [messageId], references: [id])
+  createdAt DateTime  @default(now())
+}
+
+// Enhanced Review model
+model Review {
+  id            String    @id @default(cuid())
+  rating          Int       // 1-5 stars
+  comment         String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  carId         String
+  car           Car       @relation(fields: [carId], references: [id])
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  bookingId     String    @unique
+  booking       Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  averageRating Float?
+  categories    ReviewCategory[]
+  photos        ReviewPhoto[]
+}
+
+// Review Category model
+model ReviewCategory {
+  id        String    @id @default(cuid())
+  name      String
+  rating    Int
+  reviewId  String
+  review    Review    @relation(fields: [reviewId], references: [id])
+}
+
+// Review Photo model
+model ReviewPhoto {
+  id        String    @id @default(cuid())
+  url       String
+  reviewId  String
+  review    Review    @relation(fields: [reviewId], references: [id])
+  createdAt DateTime  @default(now())
 }

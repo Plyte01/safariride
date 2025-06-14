@@ -468,20 +468,3 @@ export default function AdminDashboardPage() {
 }
 
 // Add/update CSS in globals.css for custom scrollbar if desired
-/*
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1; 
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #ccc; 
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #aaa; 
-}
-.quick-action-link { @apply flex items-center p-3 rounded-lg font-medium transition-colors text-sm; }
-*/

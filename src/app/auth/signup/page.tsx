@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react'; // Optional: for auto-login after signup
+import { FiUser, FiMail, FiLock, FiPhone } from 'react-icons/fi';
+import { PhoneInput } from '@/components/ui/phone-input';
+import { PhoneVerificationModal } from '@/components/phone-verification-modal';
+import { toast } from 'react-hot-toast';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -12,6 +16,9 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState('RENTER'); // Default role
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -34,6 +41,7 @@ export default function SignupPage() {
     event.preventDefault();
     setError(null);
     setSuccess(null);
+    setPhoneError(null);
     setIsLoading(true);
 
     if (password !== confirmPassword) {
@@ -48,7 +56,13 @@ export default function SignupPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ fullName, email, password, role }), // Include role
+        body: JSON.stringify({ 
+          name: fullName, 
+          email, 
+          password, 
+          role,
+          phoneNumber 
+        }),
       });
 
       const data = await response.json();
@@ -56,29 +70,9 @@ export default function SignupPage() {
       if (!response.ok) {
         setError(data.message || 'Registration failed. Please try again.');
       } else {
-        setSuccess(data.message || 'Registration successful! Please log in.');
-        // Clear form
-        setFullName('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setRole('RENTER');
-        // Optional: Redirect to login page after a delay or auto-login
-        setTimeout(() => {
-          router.push('/auth/login');
-        }, 2000);
-
-        // Optional: Auto-login (if desired)
-        const loginResult = await signIn('credentials', {
-          redirect: false,
-          email,
-          password,
-        });
-        if (loginResult?.ok) {
-          router.push('/'); // Redirect to dashboard or home
-        } else {
-          setError(loginResult?.error || "Registration successful, but auto-login failed. Please log in manually.");
-        }
+        setSuccess(data.message || 'Registration successful!');
+        // Show verification modal for phone verification
+        setShowVerificationModal(true);
       }
     } catch (err) {
       console.error('Signup fetch error:', err);
@@ -86,6 +80,11 @@ export default function SignupPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePhoneVerified = () => {
+    toast.success('Registration completed successfully!');
+    router.push('/auth/login');
   };
 
   return (
@@ -112,35 +111,73 @@ export default function SignupPage() {
             >
               Full Name
             </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiUser className="h-5 w-5 text-gray-400" />
+              </div>
             <input
               id="fullName" name="fullName" type="text" autoComplete="name" required
-              className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={isLoading}
             />
+            </div>
           </div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email address</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiMail className="h-5 w-5 text-gray-400" />
+              </div>
             <input
               id="email" name="email" type="email" autoComplete="email" required
-              className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading}
             />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiPhone className="h-5 w-5 text-gray-400" />
+              </div>
+              <PhoneInput
+                id="phone"
+                name="phone"
+                required //to make phone number optional,remove this
+                className="mt-1 appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="+254712345678"
+                value={phoneNumber}
+                onChange={(value) => setPhoneNumber(value)}
+                error={phoneError || undefined}
+              />
+            </div>
           </div>
           <div>
             <label htmlFor="password"className="block text-sm font-medium text-gray-700">Password (min. 8 chars)</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiLock className="h-5 w-5 text-gray-400" />
+              </div>
             <input
               id="password" name="password" type="password" autoComplete="new-password" required
-              className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading}
             />
+            </div>
           </div>
           <div>
             <label htmlFor="confirmPassword"className="block text-sm font-medium text-gray-700">Confirm Password</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiLock className="h-5 w-5 text-gray-400" />
+              </div>
             <input
               id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" required
-              className="mt-1 appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="mt-1 appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="Confirm your password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading}
             />
+            </div>
           </div>
 
           {/* Role Selection - For testing, can be removed or controlled by admin later */}
@@ -216,6 +253,13 @@ export default function SignupPage() {
           </Link>
         </p>
       </div>
+
+      <PhoneVerificationModal
+        isOpen={showVerificationModal}
+        onClose={() => setShowVerificationModal(false)}
+        phoneNumber={phoneNumber}
+        onVerified={handlePhoneVerified}
+      />
     </div>
   );
 }

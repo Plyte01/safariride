@@ -241,6 +241,7 @@ export default function AdminUsersPage() {
                 <th className="th-table w-[10%]">Role</th>
                 <th className="th-table w-[10%] text-center">Trusted</th>
                 <th className="th-table w-[10%] text-center">Email Verified</th>
+                <th className="th-table w-[10%] text-center">Phone Verified</th>
                 <th className="th-table w-[10%]">Joined</th>
                 <th className="th-table w-[5%] text-center">Stats</th>
                 <th className="th-table w-[10%]">Actions</th>
@@ -264,6 +265,15 @@ export default function AdminUsersPage() {
                   <td className="td-table"><span className={`status-badge ${ user.role === UserRole.ADMIN ? 'bg-purple-100 text-purple-700' : user.role === UserRole.OWNER ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-700'}`}>{user.role}</span></td>
                   <td className="td-table text-center">{(user.role === UserRole.OWNER || user.role === UserRole.ADMIN) ? (user.isTrustedOwner ? <FiShield className="text-green-500 h-5 w-5 mx-auto" title="Trusted"/> : <FiShieldOff className="text-gray-400 h-5 w-5 mx-auto" title="Not Trusted"/>) : <span className="text-gray-400">-</span> }</td>
                   <td className="td-table text-center">{user.emailVerified ? <FiCheckCircle className="text-green-500 h-5 w-5 mx-auto" title={`Verified: ${formatTimestamp(user.emailVerified)}`}/> : <FiXCircle className="text-red-500 h-5 w-5 mx-auto" title="Not Verified"/>}</td>
+                  <td className="td-table text-center">
+                    {user.phoneNumber ? (
+                      user.phoneVerified ? 
+                        <FiCheckCircle className="text-green-500 h-5 w-5 mx-auto" title={`Phone Verified: ${user.phoneNumber}`}/> : 
+                        <FiAlertTriangle className="text-orange-500 h-5 w-5 mx-auto" title={`Phone Not Verified: ${user.phoneNumber}`}/>
+                    ) : (
+                      <FiXCircle className="text-gray-400 h-5 w-5 mx-auto" title="No Phone Number"/>
+                    )}
+                  </td>
                   <td className="td-table text-gray-600">{formatTimestamp(user.createdAt)}</td>
                   <td className="td-table text-center text-xs text-gray-500">
                     {user.role === UserRole.OWNER || user.role === UserRole.ADMIN ? `C:${user._count?.cars ?? 0}` : ''}
@@ -355,20 +365,3 @@ export default function AdminUsersPage() {
 }
 
 // Add/Update CSS in globals.css (ensure these classes match your global style definitions)
-/*
-.label-form { @apply block text-sm font-medium text-gray-700 mb-1; }
-.input-form { @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm placeholder-gray-400; }
-.select-form { @apply mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md; }
-.th-table { @apply px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap; }
-.td-table { @apply px-4 py-3 text-sm text-gray-700; } // Removed whitespace-nowrap to allow wrapping for long emails if needed
-.status-badge { @apply px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full; }
-.pagination-btn { @apply inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed; }
-.form-checkbox { @apply h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-offset-0 focus:ring-blue-500; }
-.btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 py-2 px-4 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2; }
-.btn-secondary { @apply px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500; }
-.abs-icon-left { @apply absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none; }
-.icon-sm { @apply h-5 w-5 text-gray-400; }
-.checkbox-group { @apply flex items-center space-x-3 p-3 bg-slate-50 rounded-md border border-slate-200; }
-.help-text { @apply text-xs text-gray-500 mt-1; }
-.action-icon-button { @apply p-1.5 rounded-md transition-colors; } // For consistent icon button padding & hover
-*/

@@ -45,7 +45,16 @@ export async function GET (
     const car = await prisma.car.findUnique({
       where: { id: carId },
       include: {
-        owner: { select: { id: true, name: true, email: true, image: true } },
+        owner: { 
+          select: { 
+            id: true, 
+            name: true, 
+            email: true, 
+            image: true,
+            phoneNumber: true,
+            phoneVerified: true 
+          } 
+        },
         reviews: {
           orderBy: { createdAt: 'desc' },
           take: 5,

@@ -83,7 +83,15 @@ const getBookingStatusColor = (status: BookingStatus): string => {
       default: return 'bg-gray-100 text-gray-800';
     }
 };
-const getPaymentStatusColor = (status: PrismaPaymentStatus): string => { /* similar logic for payment status colors */ return ""; };
+const getPaymentStatusColor = (status: PrismaPaymentStatus): string => {
+    switch (status) {
+      case PrismaPaymentStatus.PAID: return 'bg-green-100 text-green-800';
+      case PrismaPaymentStatus.PENDING: return 'bg-yellow-100 text-yellow-800';
+      case PrismaPaymentStatus.FAILED: return 'bg-red-100 text-red-800';
+      case PrismaPaymentStatus.REFUNDED: return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+};
 const RenderStars = ({ rating }: { rating: number }) => {
   // Renders 5 stars, filled according to rating (can be fractional)
   const stars = [];
@@ -115,6 +123,8 @@ export default function AdminBookingDetailPage() {
   const [newStatus, setNewStatus] = useState<BookingStatus | ''>('');
   const [adminNotes, setAdminNotes] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [success, setSuccess] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -160,6 +170,36 @@ export default function AdminBookingDetailPage() {
         alert(`Error: ${err.message}`);
     } finally {
         setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!booking) return;
+    
+    setIsUpdating(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const response = await fetch(`/api/bookings/${booking.id}/payment`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to update payment status');
+      }
+
+      const updatedBooking = await response.json();
+      setBooking(updatedBooking);
+      setSuccess('Payment status updated successfully');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update payment status');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -232,9 +272,19 @@ export default function AdminBookingDetailPage() {
                     <div className="flex items-center space-x-3">
                         <img src={booking.user.image || '/default-avatar.png'} alt={booking.user.name || ""} className="h-12 w-12 rounded-full object-cover"/>
                         <div>
-                            <Link href={`/admin/users/${booking.user.id}/details`} className="font-semibold text-blue-600 hover:underline">{booking.user.name || 'Unnamed Renter'}</Link>
+                            <Link href={`/admin/users/${booking.user.id}`} className="font-semibold text-blue-600 hover:underline">{booking.user.name || 'Unnamed Renter'}</Link>
                             <p className="text-xs text-gray-500">{booking.user.email}</p>
                             <p className="text-xs text-gray-500">Role: {formatEnum(booking.user.role)}</p>
+                            {booking.user.phoneNumber && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {booking.user.phoneNumber}
+                                    {booking.user.phoneVerified ? (
+                                        <span className="ml-1 text-green-600">✓ Verified</span>
+                                    ) : (
+                                        <span className="ml-1 text-orange-600">⚠ Not Verified</span>
+                                    )}
+                                </p>
+                            )}
                         </div>
                     </div>
                 </DetailSection>
@@ -244,14 +294,41 @@ export default function AdminBookingDetailPage() {
                     {booking.payment ? (
                         <>
                             <InfoPair label="Payment Method" value={formatEnum(booking.payment.paymentMethod)} />
-                            <InfoPair label="Payment Status" value={<span className={`font-medium ${getPaymentStatusColor(booking.payment.status)}`}>{formatEnum(booking.payment.status)}</span>} />
+                            <InfoPair 
+                                label="Payment Status" 
+                                value={
+                                    <div className="flex items-center gap-2">
+                                        <span className={`font-medium ${getPaymentStatusColor(booking.payment.status)}`}>
+                                            {formatEnum(booking.payment.status)}
+                                        </span>
+                                        {booking.payment.status === PrismaPaymentStatus.PENDING && (
+                                            <button
+                                                onClick={handleMarkAsPaid}
+                                                disabled={isUpdating}
+                                                className="ml-2 px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {isUpdating ? 'Updating...' : 'Mark as Paid'}
+                                            </button>
+                                        )}
+                                    </div>
+                                } 
+                            />
                             <InfoPair label="Payment Type" value={formatEnum(booking.payment.paymentType)} />
                             <InfoPair label="Transaction ID" value={booking.payment.transactionId} />
                             <InfoPair label="Payment Record ID" value={booking.payment.id.substring(0,12)+'...'} />
-                             {/* TODO: Add button to "Mark as Paid" for CASH if payment status is PENDING */}
                         </>
                     ) : (
                         <p className="text-sm text-gray-500">No payment record associated with this booking yet.</p>
+                    )}
+                    {error && (
+                        <div className="mt-2 p-2 bg-red-100 text-red-700 rounded text-sm">
+                            {error}
+                        </div>
+                    )}
+                    {success && (
+                        <div className="mt-2 p-2 bg-green-100 text-green-700 rounded text-sm">
+                            {success}
+                        </div>
                     )}
                 </DetailSection>
                 

@@ -5,7 +5,6 @@ import './globals.css';
 import Footer from '@/components/Footer';
 import AuthProvider from '@/components/AuthProvider';
 import Navbar from '@/components/Navbar';
-import { ThemeProvider } from "next-themes";
 import { Toaster } from '@/components/ui/sonner'; // Assuming this path is correct for your Sonner component
 // import Footer from '@/components/Footer'; // Optional
 
@@ -75,15 +74,14 @@ export const metadata: Metadata = {
 // --- PWA Viewport Configuration ---
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#1D4ED8' }, // Example: Blue-600 for light mode (match your brand)
-    { media: '(prefers-color-scheme: dark)', color: '#1E3A8A' },  // Example: Darker Blue-800 for dark mode (match your brand)
+    { media: '(prefers-color-scheme: light)', color: '#1D4ED8' },
   ],
   // Common viewport settings
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1, // Optional: Prevents zooming, common for app-like PWAs
   // userScalable: false, // Optional: Also prevents zooming
-  colorScheme: 'light dark', // Informs browser about supported color schemes
+  colorScheme: 'light', // Informs browser about supported color schemes
 };
 
 
@@ -99,24 +97,17 @@ export default function RootLayout({
         // Added font-sans assuming --font-inter is your sans-serif base in tailwind.config.js
         // Added selection styles for better UX
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <div className="flex flex-col flex-1 site-wrapper"> {/* Added site-wrapper for potential further global styling */}
-                <Navbar />
-                <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 flex-grow">
-                  {/* Adjusted padding for different screen sizes */}
-                  {children}
-                </main>
-                <Footer />
-            </div>
-            <Toaster richColors position="top-right" closeButton duration={5000} /> {/* Added duration for Sonner */}
-          </AuthProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <div className="flex flex-col flex-1 site-wrapper"> {/* Added site-wrapper for potential further global styling */}
+            <Navbar />
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 flex-grow">
+              {/* Adjusted padding for different screen sizes */}
+              {children}
+            </main>
+            <Footer />
+          </div>
+          <Toaster richColors position="top-right" closeButton duration={5000} /> {/* Added duration for Sonner */}
+        </AuthProvider>
       </body>
     </html>
   );
