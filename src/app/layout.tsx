@@ -17,57 +17,75 @@ const inter = Inter({
 export const metadata: Metadata = {
   // Existing Metadata
   title: {
-    default: 'SafariRide - Your Adventure Awaits', // Slightly more engaging default title
+    default: 'SafariRide - Your Adventure Awaits',
     template: '%s | SafariRide',
   },
   description: 'Find and rent the perfect car for your next safari, road trip, or adventure in East Africa. Easy, reliable, and affordable car rentals with SafariRide.',
-  keywords: ['car rental Kenya', 'safari car hire Tanzania', 'adventure vehicles Uganda', 'rent a car Rwanda', '4x4 rental East Africa', 'car booking app', 'SafariRide'],
+  keywords: ['car rental Kenya', 'car hire', 'adventure vehicles', 'rent a car', '4x4 rental East Africa', 'car booking app', 'SafariRide', 'car rental East Africa', 'safari vehicle rental', 'off-road car rental', 'luxury car rental'],
+  
+  // Enhanced metadata
+  metadataBase: new URL('https://www.safariride.com'),
+  alternates: {
+    canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   
   // PWA Specific Metadata
-  manifest: '/manifest.json', // Link to your Web App Manifest
+  manifest: '/manifest.json',
 
-  // Apple PWA Meta Tags (for better "Add to Home Screen" experience on iOS)
+  // Apple PWA Meta Tags
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default", // or "black-translucent"
+    statusBarStyle: "default",
     title: "SafariRide",
   },
 
-  // Optional: Open Graph and Twitter Card metadata for social sharing
+  // Enhanced Open Graph metadata
   openGraph: {
     type: 'website',
-    locale: 'en_US', // Adjust to your primary locale
-    url: 'https://www.safariride.com', // Replace with your actual production URL
+    locale: 'en_US',
+    url: 'https://www.safariride.com',
     title: 'SafariRide - Car Rentals for Your Adventure',
-    description: 'Discover and book unique cars for your travels with SafariRide.',
+    description: 'Discover and book unique cars for your travels with SafariRide. The best car rental platform in East Africa for safaris and adventures.',
     siteName: 'SafariRide',
-    // images: [ // Add a good quality OG image
-    //   {
-    //     url: 'https://www.safariride.com/og-image.png', // Replace with your actual OG image URL
-    //     width: 1200,
-    //     height: 630,
-    //     alt: 'SafariRide Platform Showcase',
-    //   },
-    // ],
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'SafariRide - Your Adventure Car Rental Platform',
+      },
+    ],
   },
-  // twitter: { // If you have a Twitter presence
+  
+  // Enhanced Twitter Card metadata
+  // twitter: {
   //   card: 'summary_large_image',
   //   title: 'SafariRide - Adventure Car Rentals',
-  //   description: 'Rent unique cars for your next adventure.',
-  //   // site: '@yourTwitterHandle', // Your Twitter handle
-  //   // creator: '@creatorTwitterHandle', // Creator's Twitter handle
-  //   // images: ['https://www.safariride.com/twitter-card-image.png'], // Replace with your Twitter card image
+  //   description: 'Rent unique cars for your next adventure in East Africa. The best car rental platform for safaris and road trips.',
+  //   images: ['/twitter-card-image.png'],
   // },
 
-  // Icons (ensure these files exist in your /public folder or relevant paths)
+  // Enhanced Icons
   icons: {
-    icon: [ // Can provide multiple icon sizes/types
-        { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
-        { url: '/icons/icon-16x16.png', sizes: '16x16', type: 'image/png' },
-        { url: '/icons/icon-32x32.png', sizes: '32x32', type: 'image/png' },
+    icon: [
+      { url: '/favicon.ico', sizes: 'any', type: 'image/x-icon' },
+      { url: '/icons/icon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icons/icon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/icons/apple-touch-icon.png', // e.g., 180x180
-    // shortcut: '/icons/shortcut-icon.png', // For older browsers
+    apple: '/icons/apple-touch-icon.png',
   },
 };
 
