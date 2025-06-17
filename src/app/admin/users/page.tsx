@@ -15,7 +15,8 @@ import {
     FiShieldOff, 
     FiAlertTriangle,
     FiEye,
-    FiXCircle as FiCloseIcon // For modal close button
+    FiXCircle as FiCloseIcon,
+    FiTrash2
 } from 'react-icons/fi';
 
 // Type for user data received from API (with counts)
@@ -198,6 +199,26 @@ export default function AdminUsersPage() {
     router.push(`/admin/users/${userId}`);
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) return;
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ message: "Failed to delete user." }));
+        throw new Error(errData.message);
+      }
+      // Remove the deleted user from the local state
+      setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+      alert("User deleted successfully.");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred.');
+      }
+    }
+  };
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
@@ -284,6 +305,9 @@ export default function AdminUsersPage() {
                     </button>
                     <button onClick={() => openEditModal(user)} className="action-icon-button text-indigo-600 hover:text-indigo-800" title="Edit User">
                       <FiEdit2 className="h-4 w-4"/>
+                    </button>
+                    <button onClick={() => handleDeleteUser(user.id)} className="action-icon-button text-red-600 hover:text-red-800" title="Delete User">
+                      <FiTrash2 className="h-4 w-4"/>
                     </button>
                   </td>
                 </tr>))}

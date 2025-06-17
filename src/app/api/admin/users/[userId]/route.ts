@@ -196,3 +196,38 @@ export async function PATCH (
     )
   }
 }
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  const { userId } = await params;
+
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user as SessionUser).role !== UserRole.ADMIN) {
+    return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return NextResponse.json({ message: 'User not found' }, { status: 404 });
+    }
+
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+
+    return NextResponse.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Failed to delete user:', error);
+    return NextResponse.json({
+      message: 'Failed to delete user',
+      details: String(error)
+    }, { status: 500 });
+  }
+}
+
